@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/base64"
 	"fmt"
+	"math/rand"
 	"net/http"
+	"time"
 
 	"lottery-system/config"
 	"lottery-system/models"
@@ -29,11 +31,7 @@ func GetRegisterQRCode(c *gin.Context) {
 	}
 
 	// 生成注册URL
-	// 格式: https://yourdomain.com/register?company_code=XXX
-	scheme := "http"
-	if c.Request.TLS != nil {
-		scheme = "https"
-	}
+	// 格式: https://yourdomain.com/#/register?company_code=XXX
 
 	// 获取Host头，如果没有则使用配置
 	host := c.Request.Host
@@ -41,7 +39,19 @@ func GetRegisterQRCode(c *gin.Context) {
 		host = "localhost:5173" // 默认前端开发地址
 	}
 
-	registerURL := fmt.Sprintf("%s://%s/register?company_code=%s", scheme, host, company.Code)
+	// 检查是否通过 HTTPS 访问（检查 X-Forwarded-Proto 头或 TLS）
+	scheme := "http"
+	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+
+	// 如果是生产域名，强制使用 HTTPS
+	if host == "makerroot.com" || host == "www.makerroot.com" {
+		scheme = "https"
+	}
+
+	// 使用 Hash 模式路由，URL 格式：https://domain/#/register?company_code=XXX
+	registerURL := fmt.Sprintf("%s://%s/#/register?company_code=%s", scheme, host, company.Code)
 
 	// 生成二维码
 	qrCode, err := qrcode.Encode(registerURL, qrcode.Medium, 256)
@@ -125,10 +135,18 @@ func UserSelfRegister(c *gin.Context) {
 		}
 	}
 
-	// 创建新用户（无用户名和密码，无法登录）
+	// 生成用户名：优先使用手机号，否则使用 "u_" + 时间戳 + 随机数
+	username := ""
+	if req.Phone != "" {
+		username = req.Phone
+	} else {
+		username = fmt.Sprintf("u_%d_%d", time.Now().Unix(), rand.Intn(10000))
+	}
+
+	// 创建新用户（扫码注册，无法登录）
 	user := models.User{
-		Username:  "", // 空用户名，无法登录
-		Password:  "", // 空密码，无法登录
+		Username:  username, // 自动生成用户名（用于唯一标识）
+		Password:  "",       // 空密码，无法登录
 		Name:      req.Name,
 		Phone:     req.Phone,
 		CompanyID: company.ID,

@@ -8,19 +8,23 @@ FROM golang:1.18-alpine AS builder
 # 设置工作目录
 WORKDIR /app
 
+# 禁用 Go 模块缓存和构建缓存
+ENV GOCACHE=/tmp/go-cache
+ENV GOMODCACHE=/tmp/go-mod
+
 # 安装必要的构建工具和MySQL客户端库
 RUN apk add --no-cache git gcc musl-dev mysql-client
 
 # 复制go mod文件
 COPY go.mod go.sum ./
 
-# 下载依赖
-RUN go mod download
+# 下载依赖（不使用缓存）
+RUN go mod download -x
 
 # 复制源代码
 COPY . .
 
-# 构建应用（启用CGO以支持MySQL）
+# 构建应用（启用CGO以支持MySQL，不使用构建缓存）
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o main .
 
 # 阶段2: 运行阶段

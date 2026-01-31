@@ -9,6 +9,27 @@
     <!-- 注册容器 -->
     <div class="register-container">
       <div class="register-card glass">
+        <!-- 加载状态 -->
+        <div v-if="!companyInfo && !errorMessage" class="loading-state">
+          <a-spin size="large" />
+          <p>加载中...</p>
+        </div>
+
+        <!-- 错误状态 -->
+        <div v-if="errorMessage" class="error-state">
+          <a-result
+            status="error"
+            title="加载失败"
+            :sub-title="errorMessage"
+          >
+            <template #extra>
+              <a-button type="primary" @click="fetchCompanyInfo">
+                重试
+              </a-button>
+            </template>
+          </a-result>
+        </div>
+
         <!-- 公司信息 -->
         <div v-if="companyInfo" class="company-header">
           <h1 class="company-title">{{ companyInfo.company.name }}</h1>
@@ -129,7 +150,7 @@ import {
   InfoCircleOutlined,
   SafetyOutlined
 } from '@ant-design/icons-vue'
-import api from '../utils/api'
+import { publicApi } from '../utils/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -155,7 +176,7 @@ const fetchCompanyInfo = async () => {
     }
 
     companyCode.value = code
-    const data = await api.get(`/api/company-info?company_code=${code}`)
+    const data = await publicApi.get(`/api/company-info?company_code=${code}`)
     companyInfo.value = data
   } catch (error) {
     errorMessage.value = error.response?.data?.error || '获取公司信息失败'
@@ -174,7 +195,7 @@ const handleRegister = async () => {
   errorMessage.value = ''
 
   try {
-    const response = await api.post('/api/self-register', {
+    const response = await publicApi.post('/api/self-register', {
       name: registerForm.value.name,
       phone: registerForm.value.phone
     }, {
@@ -291,6 +312,20 @@ onMounted(() => {
   font-size: 14px;
   color: #666;
   margin: 0;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-state p {
+  margin-top: 16px;
+  color: #666;
+}
+
+.error-state {
+  padding: 20px;
 }
 
 .register-form {

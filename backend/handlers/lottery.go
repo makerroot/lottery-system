@@ -381,8 +381,19 @@ func Draw(c *gin.Context) {
 		return
 	}
 
-	// 检查库存
-	if level.UsedStock >= level.TotalStock {
+	// 计算该奖项等级下所有奖品的实际库存（从 Prize 表聚合）
+	type StockInfo struct {
+		TotalStock int `json:"total_stock"`
+		UsedStock  int `json:"used_stock"`
+	}
+	var stockInfo StockInfo
+	config.DB.Model(&models.Prize{}).
+		Where("level_id = ?", levelID).
+		Select("COALESCE(SUM(total_stock), 0) as total_stock, COALESCE(SUM(used_stock), 0) as used_stock").
+		Scan(&stockInfo)
+
+	// 检查实际库存
+	if stockInfo.UsedStock >= stockInfo.TotalStock {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "该奖项已抽完"})
 		return
 	}
@@ -391,7 +402,7 @@ func Draw(c *gin.Context) {
 	if drawCount <= 0 {
 		drawCount = 1
 	}
-	available := level.TotalStock - level.UsedStock
+	available := stockInfo.TotalStock - stockInfo.UsedStock
 	if drawCount > available {
 		drawCount = available
 	}

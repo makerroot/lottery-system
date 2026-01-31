@@ -1,5 +1,21 @@
 import axios from 'axios'
 
+// 创建公开API实例（用于不需要认证的接口，如注册、获取公司信息等）
+export const publicApi = axios.create({
+  baseURL: '/',
+  timeout: 10000
+})
+
+// publicApi 响应拦截器：自动返回 response.data
+publicApi.interceptors.response.use(
+  response => {
+    return response.data
+  },
+  error => {
+    return Promise.reject(error)
+  }
+)
+
 // 创建用于抽奖页面的axios实例
 // 使用相对路径，通过 Caddy 反向代理访问后端
 export const api = axios.create({

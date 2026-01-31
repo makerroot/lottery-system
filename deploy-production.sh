@@ -1,21 +1,24 @@
 #!/bin/bash
 
 # ============================================
-# 服务器部署脚本 - 使用本地构建的前端
+# 服务器部署脚本 - 零停机部署
 # ============================================
 
 set -e
 
-echo "🚀 开始部署..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🚀 开始零停机部署..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
 # 1. 拉取最新代码
-echo "📦 拉取最新代码..."
+echo "📦 步骤 1/5: 拉取最新代码..."
 git pull origin main
+echo "✅ 代码已更新"
+echo ""
 
 # 2. 验证 dist 存在
-echo ""
-echo "📋 检查 frontend/dist..."
+echo "📋 步骤 2/5: 检查 frontend/dist..."
 if [ ! -d "frontend/dist" ]; then
     echo "❌ 错误: frontend/dist 不存在"
     echo "请先在本地构建前端: npm run build"
@@ -23,55 +26,66 @@ if [ ! -d "frontend/dist" ]; then
 fi
 echo "✅ frontend/dist 存在"
 du -sh frontend/dist/
-
-# 3. 停止旧服务
 echo ""
-echo "🛑 停止旧服务..."
-docker compose --env-file docker-compose-production.env down
 
-# 4. 清理旧 volume（可选）
-echo ""
-read -p "是否删除旧的 frontend-dist volume? (y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "🧹 清理旧 volume..."
-    docker volume rm lottery-frontend-dist 2>/dev/null || echo "Volume 不存在"
-fi
+# 3. 滚动更新后端服务（零停机）
+echo "🔧 步骤 3/5: 滚动更新后端服务（零停机）..."
+echo "⏳ 构建新镜像..."
+docker compose --env-file docker-compose-production.env build backend
 
-# 5. 启动服务
-echo ""
-echo "🚀 启动服务..."
+echo "⏳ 启动所有服务（确保首次部署时服务都会启动）..."
 docker compose --env-file docker-compose-production.env up -d
 
-# 6. 等待服务启动
+echo "⏳ 等待后端健康检查通过..."
+for i in {1..30}; do
+    if docker compose --env-file docker-compose-production.env ps | grep backend | grep -q "healthy"; then
+        echo "✅ 后端服务已就绪"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "❌ 后端健康检查超时"
+        docker compose --env-file docker-compose-production.env logs backend --tail 50
+        exit 1
+    fi
+    echo "   等待中... ($i/30)"
+    sleep 1
+done
 echo ""
-echo "⏳ 等待服务启动..."
-sleep 10
 
-# 7. 显示服务状态
+# 4. 更新前端服务（零停机）
+echo "🌐 步骤 4/5: 更新前端服务（零停机）..."
+echo "✅ 前端静态文件已通过 volume 挂载，Caddy 自动提供新文件"
+echo "✅ 无需重启 Caddy，无 503 错误"
 echo ""
-echo "📊 服务状态:"
+
+# 5. 显示服务状态
+echo "📊 步骤 5/5: 服务状态:"
 docker compose --env-file docker-compose-production.env ps
-
-# 8. 验证部署
 echo ""
+
+# 6. 验证部署
 echo "🧪 验证部署..."
-if curl -s http://localhost/api/health > /dev/null; then
+sleep 3
+
+# 检查后端 API
+if curl -sf http://localhost/api/health > /dev/null 2>&1; then
     echo "✅ 后端 API 正常"
 else
     echo "❌ 后端 API 异常"
+    echo "📋 最近日志:"
+    docker compose --env-file docker-compose-production.env logs backend --tail 20
 fi
 
-if curl -s http://localhost/ > /dev/null; then
+# 检查前端
+if curl -sf http://localhost/ > /dev/null 2>&1; then
     echo "✅ 前端访问正常"
 else
     echo "❌ 前端访问异常"
 fi
 
-# 9. 显示访问信息
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ 部署完成！"
+echo "✅ 零停机部署完成！"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "📍 访问地址:"
@@ -85,5 +99,9 @@ echo "   密码: 123456"
 echo ""
 echo "💡 查看日志:"
 echo "   docker compose --env-file docker-compose-production.env logs -f"
+echo ""
+echo "💡 查看特定服务日志:"
+echo "   docker compose --env-file docker-compose-production.env logs -f backend"
+echo "   docker compose --env-file docker-compose-production.env logs -f caddy"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

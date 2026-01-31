@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"lottery-system/config"
 	"lottery-system/models"
@@ -104,7 +105,7 @@ func CreateUser(c *gin.Context) {
 			// 有手机号且找到用户：认为已存在
 			if req.Phone != "" {
 				c.JSON(http.StatusConflict, gin.H{
-					"error": "该用户名和手机号的用户已存在",
+					"error":          "该用户名和手机号的用户已存在",
 					"existing_users": existingUsers,
 				})
 				return
@@ -141,11 +142,34 @@ func CreateUser(c *gin.Context) {
 		}
 	} else {
 		// 情况2：只提供了 name 和 phone -> 创建不可登录的用户（管理员添加）
-		// 使用占位符 username 和 password
+		// 自动生成 username（使用手机号或时间戳+随机数）
+		var username string
+		if req.Phone != "" {
+			username = req.Phone
+		} else {
+			username = fmt.Sprintf("u_%d_%d", time.Now().Unix(), utils.RandomInt(10000))
+		}
+
+		// 生成随机密码（用户无法登录，但密码字段不能为空）
+		randomPassword := utils.GenerateRandomPassword(8)
+		hashedPassword, err := utils.HashPassword(randomPassword)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "密码加密失败"})
+			return
+		}
+
+		// 检查用户名是否已存在
+		var existingUserCount int64
+		config.DB.Model(&models.User{}).Where("company_id = ? AND username = ?", req.CompanyID, username).Count(&existingUserCount)
+		if existingUserCount > 0 {
+			// 用户名重复，添加序号
+			username = fmt.Sprintf("%s_%d", username, existingUserCount+1)
+		}
+
 		user = models.User{
 			CompanyID: req.CompanyID,
-			Username:  "", // 空用户名，无法登录
-			Password:  "", // 空密码，无法登录
+			Username:  username,
+			Password:  hashedPassword,
 			Role:      models.RoleUser,
 			Name:      req.Name,
 			Phone:     req.Phone,
@@ -169,12 +193,12 @@ func CreateUser(c *gin.Context) {
 
 	// 如果用户名被修改了，返回提示
 	response := map[string]interface{}{
-		"id":         user.ID,
-		"username":   user.Username,
-		"name":       user.Name,
-		"phone":      user.Phone,
-		"has_drawn":  false,
-		"can_login":  user.Username != "", // 是否可以登录
+		"id":        user.ID,
+		"username":  user.Username,
+		"name":      user.Name,
+		"phone":     user.Phone,
+		"has_drawn": false,
+		"can_login": user.Username != "", // 是否可以登录
 	}
 
 	// 如果用户名为空，说明是管理员添加的抽奖用户
@@ -215,6 +239,10 @@ func BatchCreateUsers(c *gin.Context) {
 	var createdUsers []models.User
 	var failedUsers []string
 
+	// 用于批量导入时的用户名计数器
+	batchIndex := 0
+	baseTimestamp := time.Now().Unix()
+
 	for _, userStr := range req.Users {
 		// 解析格式: "姓名,手机号（可选）"
 		var name, phone string
@@ -251,11 +279,37 @@ func BatchCreateUsers(c *gin.Context) {
 			continue
 		}
 
-		// 创建用户（无用户名和密码，无法登录）
+		// 创建用户（自动生成 username 和 password）
+		// 生成 username：优先使用手机号，否则使用时间戳+批量索引
+		var username string
+		if phone != "" {
+			username = phone
+		} else {
+			// 使用批量索引确保唯一性
+			batchIndex++
+			username = fmt.Sprintf("u_%d_%d", baseTimestamp, batchIndex)
+		}
+
+		// 生成随机密码（用户无法登录，但密码字段不能为空）
+		randomPassword := utils.GenerateRandomPassword(8)
+		hashedPassword, err := utils.HashPassword(randomPassword)
+		if err != nil {
+			failedUsers = append(failedUsers, name+" (密码加密失败)")
+			continue
+		}
+
+		// 检查用户名是否已存在
+		var existingUserCount int64
+		config.DB.Model(&models.User{}).Where("company_id = ? AND username = ?", req.CompanyID, username).Count(&existingUserCount)
+		if existingUserCount > 0 {
+			// 用户名重复，添加序号
+			username = fmt.Sprintf("%s_%d", username, existingUserCount+1)
+		}
+
 		user := models.User{
 			CompanyID: req.CompanyID,
-			Username:  "", // 空用户名，无法登录
-			Password:  "", // 空密码，无法登录
+			Username:  username,
+			Password:  hashedPassword,
 			Role:      models.RoleUser,
 			Name:      name,
 			Phone:     phone,
@@ -506,7 +560,7 @@ func ScanAddUser(c *gin.Context) {
 
 	if isAdmin == false && isSuperAdmin == false {
 		c.JSON(http.StatusForbidden, gin.H{
-			"error": "只有管理员才能扫码添加用户",
+			"error":      "只有管理员才能扫码添加用户",
 			"error_code": "PERMISSION_DENIED",
 		})
 		return
@@ -609,10 +663,10 @@ func ScanAddUser(c *gin.Context) {
 				c.JSON(http.StatusConflict, gin.H{
 					"error": "该用户已经抽过奖",
 					"user": gin.H{
-						"id":       existingUser.ID,
-						"username": existingUser.Username,
-						"name":     existingUser.Name,
-						"phone":    existingUser.Phone,
+						"id":        existingUser.ID,
+						"username":  existingUser.Username,
+						"name":      existingUser.Name,
+						"phone":     existingUser.Phone,
 						"has_drawn": true,
 					},
 				})
@@ -645,8 +699,8 @@ func ScanAddUser(c *gin.Context) {
 
 			utils.WithFields(map[string]interface{}{
 				"original_username": username,
-				"final_username": finalUsername,
-				"count": count,
+				"final_username":    finalUsername,
+				"count":             count,
 			}).Info("检测到重名用户，自动添加序号后缀")
 
 			username = finalUsername
@@ -674,8 +728,8 @@ func ScanAddUser(c *gin.Context) {
 
 	if err := config.DB.Create(&user).Error; err != nil {
 		utils.WithFields(map[string]interface{}{
-			"error":     err,
-			"username":  username,
+			"error":      err,
+			"username":   username,
 			"company_id": companyID,
 		}).Error("创建用户失败")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
