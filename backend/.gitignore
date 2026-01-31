@@ -1,0 +1,9 @@
+
+# ============================================
+# Docker 部署数据目录（共享卷）
+# ============================================
+docker/mysql/data/
+docker/redis/data/
+docker/caddy/data/
+docker/caddy/logs/
+docker/backend/logs/

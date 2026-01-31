@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>测试URL参数</title>
+</head>
+<body>
+  <h1>URL参数测试</h1>
+  <div id="result"></div>
+
+  <script>
+    // 测试1: 读取URL参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const company = urlParams.get('company');
+    document.getElementById('result').innerHTML = `
+      <p>完整URL: ${window.location.href}</p>
+      <p>URL参数 company: ${company}</p>
+    `;
+
+    // 测试2: 在控制台显示
+    console.log('完整URL:', window.location.href);
+    console.log('URL参数 company:', company);
+
+    // 测试3: 模拟Vue的解析
+    const hashParams = window.location.hash.split('?');
+    if (hashParams.length > 1) {
+      const hashSearchParams = new URLSearchParams(hashParams[1]);
+      const hashCompany = hashSearchParams.get('company');
+      console.log('Hash中的company参数:', hashCompany);
+      document.getElementById('result').innerHTML += `<p>Hash中的company: ${hashCompany}</p>`;
+    }
+  </script>
+</body>
+</html>

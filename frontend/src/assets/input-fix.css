@@ -1,0 +1,247 @@
+/* ============================================
+   全局输入框样式修复
+   确保所有输入框文字颜色清晰可见
+   ============================================ */
+
+/* ============================================
+   Ant Design 输入框全局样式
+   ============================================ */
+
+/* 普通输入框 */
+.ant-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a1a1a !important;
+  border: 1px solid rgba(217, 217, 217, 0.8);
+}
+
+.ant-input::placeholder {
+  color: #8c8c8c !important;
+}
+
+.ant-input:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: var(--neon-cyan, #00fff5);
+}
+
+.ant-input:focus,
+.ant-input-focused {
+  background: rgba(255, 255, 255, 1) !important;
+  color: #1a1a1a !important;
+  border-color: var(--neon-cyan, #00fff5) !important;
+  box-shadow: 0 0 0 2px rgba(0, 255, 245, 0.2);
+}
+
+/* ============================================
+   密码输入框
+   ============================================ */
+
+.ant-input-password {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(217, 217, 217, 0.8);
+}
+
+.ant-input-password .ant-input {
+  background: transparent !important;
+  color: #1a1a1a !important;
+}
+
+.ant-input-password .ant-input::placeholder {
+  color: #8c8c8c !important;
+}
+
+.ant-input-password:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: var(--neon-cyan, #00fff5);
+}
+
+.ant-input-password:focus,
+.ant-input-password-focused {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: var(--neon-cyan, #00fff5) !important;
+  box-shadow: 0 0 0 2px rgba(0, 255, 245, 0.2);
+}
+
+/* 确保密码输入框内的input元素继承样式 */
+.ant-input-password input {
+  background: transparent !important;
+  color: #1a1a1a !important;
+}
+
+/* ============================================
+   文本域 (Textarea)
+   ============================================ */
+
+.ant-input-textarea-show-count::after {
+  color: #8c8c8c !important;
+}
+
+textarea.ant-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a1a1a !important;
+}
+
+/* ============================================
+   数字输入框
+   ============================================ */
+
+.ant-input-number {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.ant-input-number input {
+  background: transparent !important;
+  color: #1a1a1a !important;
+}
+
+.ant-input-number:hover {
+  background: rgba(255, 255, 255, 1) !important;
+}
+
+.ant-input-number:focus,
+.ant-input-number-focused {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: var(--neon-cyan, #00fff5);
+  box-shadow: 0 0 0 2px rgba(0, 255, 245, 0.2);
+}
+
+/* ============================================
+   下拉选择框
+   ============================================ */
+
+.ant-select-selector {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(217, 217, 217, 0.8);
+}
+
+.ant-select-selection-placeholder {
+  color: #8c8c8c !important;
+}
+
+.ant-select-selection-item {
+  color: #1a1a1a !important;
+}
+
+.ant-select:hover .ant-select-selector {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: var(--neon-cyan, #00fff5);
+}
+
+.ant-select-focused .ant-select-selector {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: var(--neon-cyan, #00fff5) !important;
+  box-shadow: 0 0 0 2px rgba(0, 255, 245, 0.2);
+}
+
+/* 下拉菜单 */
+.ant-select-dropdown {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid var(--border-color, #303040);
+}
+
+.ant-select-item {
+  color: #1a1a1a !important;
+}
+
+.ant-select-item-option-selected {
+  background: rgba(0, 255, 245, 0.15) !important;
+  color: var(--neon-cyan, #00fff5) !important;
+}
+
+.ant-select-item-option-active {
+  background: rgba(0, 255, 245, 0.1) !important;
+}
+
+/* ============================================
+   日期选择框
+   ============================================ */
+
+.ant-picker {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.ant-picker input {
+  background: transparent !important;
+  color: #1a1a1a !important;
+}
+
+.ant-picker:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: var(--neon-cyan, #00fff5);
+}
+
+.ant-picker-focused {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: var(--neon-cyan, #00fff5) !important;
+  box-shadow: 0 0 0 2px rgba(0, 255, 245, 0.2);
+}
+
+/* ============================================
+   Modal弹窗中的输入框
+   ============================================ */
+
+.ant-modal-content {
+  background: rgba(30, 30, 40, 0.98) !important;
+  border: 1px solid var(--border-color, #303040);
+}
+
+.ant-modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-color, #303040);
+}
+
+.ant-modal-title {
+  color: var(--text-primary, #ffffff) !important;
+}
+
+.ant-modal-body {
+  background: transparent !important;
+}
+
+.ant-modal .ant-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a1a1a !important;
+}
+
+.ant-modal .ant-input-password {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.ant-modal .ant-input-password input {
+  background: transparent !important;
+  color: #1a1a1a !important;
+}
+
+/* 表单标签 */
+.ant-form-item-label > label {
+  color: var(--text-primary, #ffffff) !important;
+}
+
+.ant-form-item-explain-error {
+  color: #ff6b6b !important;
+}
+
+/* ============================================
+   禁用状态
+   ============================================ */
+
+.ant-input:disabled,
+.ant-input-password:disabled,
+.ant-input-number:disabled {
+  background: rgba(255, 255, 255, 0.5) !important;
+  color: #8c8c8c !important;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   深色模式适配
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  /* 在深色模式下保持相同的样式 */
+  .ant-input,
+  .ant-input-password,
+  .ant-input-number {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: #1a1a1a !important;
+  }
+}

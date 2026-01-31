@@ -1,0 +1,178 @@
+# ============================================
+# Docker Compose 配置 - 生产环境
+# 使用共享卷（Bind Mounts）进行数据持久化
+# ============================================
+
+version: '3.8'
+
+services:
+  # ============================================
+  # MySQL 数据库服务
+  # ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: lottery-mysql
+    restart: unless-stopped
+    env_file:
+      - docker-compose-production.env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      # 共享卷：MySQL数据持久化到主机目录
+      - ${MYSQL_DATA_DIR:-./docker/mysql/data}:/var/lib/mysql
+      # 共享卷：MySQL自定义配置
+      - ${MYSQL_CONF_DIR:-./docker/mysql/conf.d}:/etc/mysql/conf.d:ro
+      # 共享卷：MySQL初始化脚本
+      - ${MYSQL_INIT_DIR:-./docker/mysql/init}:/docker-entrypoint-initdb.d:ro
+    networks:
+      - lottery-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # 生产环境不暴露MySQL端口到外部，仅内部访问
+    # ports:
+    #   - "127.0.0.1:3306:3306"
+
+  # ============================================
+  # Redis 缓存服务
+  # ============================================
+  redis:
+    image: redis:7
+    container_name: lottery-redis
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server /usr/local/etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
+    env_file:
+      - docker-compose-production.env
+    volumes:
+      # 共享卷：Redis数据持久化到主机目录
+      - ${REDIS_DATA_DIR:-./docker/redis/data}:/data
+      # 共享卷：Redis配置文件
+      - ${REDIS_CONF_DIR:-./docker/redis}:/usr/local/etc/redis:ro
+    networks:
+      - lottery-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # 生产环境不暴露Redis端口到外部，仅内部访问
+    # ports:
+    #   - "127.0.0.1:6379:6379"
+
+  # ============================================
+  # 前端构建服务（已禁用 - 使用本地构建）
+  # ============================================
+  # frontend-builder:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: lottery-frontend-builder
+  #   volumes:
+  #     - frontend-dist:/output
+  #   command: ["sh", "-c", "cp -r /app/dist/. /output/ && echo '✅ Frontend build completed and copied to volume' && ls -la /output/"]
+  #   networks:
+  #     - lottery-network
+
+  # ============================================
+  # 后端服务
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lottery-backend
+    restart: unless-stopped
+    env_file:
+      - docker-compose-production.env
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - SERVER_PORT=${SERVER_PORT:-8080}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB:-0}
+      - ENABLE_REDIS=${ENABLE_REDIS:-true}
+      - GIN_MODE=${GIN_MODE:-release}
+    volumes:
+      # 共享卷：后端日志文件
+      - ${BACKEND_LOGS_DIR:-./docker/backend/logs}:/app/logs
+    networks:
+      - lottery-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # Caddy反向代理（生产环境推荐）
+  # ============================================
+  caddy:
+    image: caddy:2
+    container_name: lottery-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      # Admin API（默认关闭，仅在调试时启用）
+      # - "2019:2019"
+    volumes:
+      # 共享卷：Caddy配置文件
+      - ${CADDY_CONF_FILE:-./docker/caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
+      # 共享卷：Caddy数据（SSL证书等）
+      - ${CADDY_DATA_DIR:-./docker/caddy/data}:/data
+      # 共享卷：Caddy日志
+      - ${CADDY_LOGS_DIR:-./docker/caddy/logs}:/var/log/caddy
+      # Let's Encrypt证书目录（使用已有证书）
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # 前端静态文件（直接挂载本地构建的 dist）
+      - ./frontend/dist:/usr/share/caddy/frontend:ro
+    networks:
+      - lottery-network
+    # environment:
+    #   # 启用管理API（调试用，生产环境关闭）
+    #   - CADDY_ADMIN=localhost:2019
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      backend:
+        condition: service_healthy
+
+# ============================================
+# 网络配置
+# ============================================
+networks:
+  lottery-network:
+    driver: bridge
+    name: lottery-network
+    # 不指定subnet，Docker会自动分配默认IP段（通常是172.17.0.0/16或172.18.0.0/16）
+    # 如需自定义，取消下面的注释：
+    # ipam:
+    #   config:
+    #     - subnet: 172.20.0.0/16
+
+# ============================================
+# 卷配置
+# ============================================
+# frontend-dist volume 已禁用 - 直接挂载本地 frontend/dist
+# volumes:
+#   frontend-dist:
+#     driver: local
+#     name: lottery-frontend-dist

@@ -1,0 +1,1 @@
+function f(e){if(!e||typeof e!="object")return e;const i={};for(const r in e)if(e.hasOwnProperty(r)){const t=e[r];typeof t=="string"?i[r]=t.trim():Array.isArray(t)?i[r]=t.map(n=>typeof n=="string"?n.trim():f(n)):t!==null&&typeof t=="object"?i[r]=f(t):i[r]=t}return i}export{f as t};

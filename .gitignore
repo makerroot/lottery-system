@@ -1,0 +1,297 @@
+# ============================================
+# 抽奖系统 - Git忽略文件配置
+# ============================================
+
+# 只提交 README.md，其他文件根据具体需要提交
+
+# ===== 操作系统文件 =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ===== IDE和编辑器 =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.claude/
+*.sublime-project
+*.sublime-workspace
+.code-workspace
+
+# ===== 环境配置文件（敏感信息）=====
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+docker-compose-production.env
+docker-compose.*.env
+
+# ===== Docker相关 =====
+# Docker数据持久化目录（共享卷）
+docker/mysql/data/
+docker/redis/data/
+docker/caddy/data/
+docker/caddy/logs/
+docker/backend/logs/
+
+# Docker证书
+docker/caddy/ssl/
+*.pem
+*.crt
+*.key
+
+# ===== 后端（Go）=====
+# 编译产物
+/backend/main
+/backend/lottery-server
+/backend/lottery-server-*
+/backend/*.exe
+/backend/*.dll
+/backend/*.so
+/backend/*.dylib
+/backend/*.test
+/backend/*.out
+
+# Go依赖
+/backend/vendor/
+
+# Go临时文件
+/backend/tmp/
+/backend/temp/
+
+# 后端日志
+/backend/*.log
+/backend/logs/
+backend.log
+backend.pid
+
+# 备份文件
+/backend/*_backup.go
+/backend/*_backup_*.go
+
+# ===== 前端 =====
+# 依赖目录
+node_modules/
+frontend/node_modules/
+
+# 构建产物（需要提交到Git，用于直接部署）
+# dist/
+# frontend/dist/
+
+# 不提交的构建缓存
+build/
+frontend/build/
+
+# 前端日志
+frontend.log
+frontend.pid
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+pnpm-error.log*
+
+# 前端临时文件
+frontend/.vite/
+frontend/.cache/
+frontend/.eslintcache
+
+# 前端环境变量
+frontend/.env.local
+frontend/.env.*.local
+
+# ===== 数据库文件 =====
+*.db
+*.sqlite
+*.sqlite3
+lottery.db
+lottery.sqlite
+lottery.sqlite3
+
+# MySQL备份
+*.sql.gz
+*.sql.bz2
+backups/
+
+# ===== 日志文件 =====
+*.log
+logs/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== 证书和密钥 =====
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+ssl/
+certs/
+keys/
+
+# ===== 测试和覆盖率 =====
+coverage/
+*.coverage
+*.cover
+coverage/
+.nyc_output/
+
+# ===== 临时文件 =====
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.swp
+*.swo
+*~.nib
+
+# ===== 压缩文件 =====
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# ===== 文档和草稿 =====
+drafts/
+
+# ⚠️ 只提交 README.md，忽略所有其他 .md 文件
+*.md
+
+# 但保留各目录下的 README.md
+!README.md
+!*/README.md
+
+# 忽略 .reports 目录（临时报告）
+.backend/.reports/
+backend/.reports/
+
+# 忽略所有临时文档
+TODO.md
+DONE.md
+NOTES.md
+NOTES*.md
+*.md.backup
+*.md.old
+
+# 忽略前端特定文档
+frontend/FRONTEND_UPDATE.md
+SINGLE_LOGIN_ENDPOINT.md
+PERMISSION_MODIFICATIONS.md
+QR_CODE*.md
+NO_*.md
+BATCH_*.md
+BUILD_*.md
+FIX_*.md
+HASH_*.md
+ADMIN_*.md
+SCAN_*.md
+START_*.md
+SIMPLIFIED_*.md
+USER*.md
+API_*.md
+ARCHITECTURE*.md
+REGISTER_*.md
+LOGIN_*.md
+GUIDE*.md
+TROUBLESHOOT*.md
+DEBUG*.md
+COMPLETE*.md
+COMPANY*.md
+DOCKER_*.md
+DEPLOY*.md
+FEATURE*.md
+
+# ===== 性能和分析 =====
+*.prof
+*.pprof
+*.heap
+
+# ===== 其他 =====
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist/
+.serverless/
+.fusebox/
+.dynamodb/
+tern-port
+
+# ===== Spring Boot（如果使用）=====
+spring-boot-*.log
+
+# ===== Maven（如果使用）=====
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# ===== Gradle（如果使用）=====
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+
+# ===== Package Files =====
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# ===== 虚拟机 =====
+.vagrant/
+
+# ===== 编译器缓存 =====
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# ===== 特定于本项目的忽略 =====
+# 生产配置
+config.production.*
+
+# 示例和模板（如果已经在代码中）
+# examples/
+# templates/
+
+# 监控和分析
+.grafana/
+.kibana/
+
+# Session数据
+sessions/
+*.session
+
+# 锁文件
+*.lock
+package-lock.json
+yarn.lock
+/backend/.reports/

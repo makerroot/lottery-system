@@ -1,0 +1,129 @@
+# ============================================
+# Docker Compose 配置 - 本地构建模式
+# 使用本地构建的前端静态文件
+# ============================================
+
+version: '3.8'
+
+services:
+  # ============================================
+  # MySQL 数据库服务
+  # ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: lottery-mysql
+    restart: unless-stopped
+    env_file:
+      - docker-compose-production.env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ${MYSQL_DATA_DIR:-./docker/mysql/data}:/var/lib/mysql
+      - ${MYSQL_CONF_DIR:-./docker/mysql/conf.d}:/etc/mysql/conf.d:ro
+      - ${MYSQL_INIT_DIR:-./docker/mysql/init}:/docker-entrypoint-initdb.d:ro
+    networks:
+      - lottery-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ============================================
+  # Redis 缓存服务
+  # ============================================
+  redis:
+    image: redis:7
+    container_name: lottery-redis
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    env_file:
+      - docker-compose-production.env
+    volumes:
+      - ${REDIS_DATA_DIR:-./docker/redis/data}:/data
+      - ${REDIS_CONF_DIR:-./docker/redis}:/usr/local/etc/redis:ro
+    networks:
+      - lottery-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================
+  # 后端服务
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lottery-backend
+    restart: unless-stopped
+    env_file:
+      - docker-compose-production.env
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - SERVER_PORT=${SERVER_PORT:-8080}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB:-0}
+      - ENABLE_REDIS=${ENABLE_REDIS:-true}
+      - GIN_MODE=${GIN_MODE:-release}
+    volumes:
+      - ${BACKEND_LOGS_DIR:-./docker/backend/logs}:/app/logs
+    networks:
+      - lottery-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # Caddy反向代理（本地构建模式）
+  # ============================================
+  caddy:
+    image: caddy:2
+    container_name: lottery-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${CADDY_CONF_FILE:-./docker/caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
+      - ${CADDY_DATA_DIR:-./docker/caddy/data}:/data
+      - ${CADDY_LOGS_DIR:-./docker/caddy/logs}:/var/log/caddy
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # 本地构建的前端静态文件（直接挂载）
+      - ./frontend/dist:/usr/share/caddy/frontend:ro
+    networks:
+      - lottery-network
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      backend:
+        condition: service_healthy
+
+# ============================================
+# 网络配置
+# ============================================
+networks:
+  lottery-network:
+    driver: bridge
+    name: lottery-network

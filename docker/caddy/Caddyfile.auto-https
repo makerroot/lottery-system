@@ -1,0 +1,96 @@
+# ============================================
+# Caddy 配置 - 自动 HTTPS（Let's Encrypt）
+# ============================================
+
+# 全局选项
+{
+    admin off
+    # 自动 HTTPS 配置
+    email admin@makerroot.com  # 改成您的邮箱
+
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50MiB
+            roll_keep 14
+        }
+        format json
+        level INFO
+    }
+}
+
+# ============================================
+# 自动 HTTPS（Caddy 会自动获取证书）
+# ============================================
+
+makerroot.com {
+    # Caddy 会自动获取 Let's Encrypt 证书
+    # 确保域名已正确解析到此服务器，且 80/443 端口开放
+
+    # 日志
+    log {
+        output file /var/log/caddy/access.log
+        format console
+    }
+
+    # ============================================
+    # 安全响应头
+    # ============================================
+    header {
+        Cache-Control "public, max-age=3600"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer-when-downgrade"
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+
+    # ============================================
+    # API 接口代理
+    # ============================================
+    handle /api/* /admin/* {
+        reverse_proxy backend:8080 {
+            health_uri /api/health
+            health_interval 10s
+            health_timeout 5s
+            fail_duration 30s
+            max_fails 3
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto "https"
+        }
+    }
+
+    # ============================================
+    # 健康检查端点
+    # ============================================
+    handle /health {
+        reverse_proxy backend:8080
+    }
+
+    # ============================================
+    # 前端 SPA 静态资源
+    # ============================================
+    handle {
+        root * /usr/share/caddy/frontend
+
+        # 1. 静态资源：文件不存在直接返回404
+        @static_files {
+            path *.js *.css *.png *.jpg *.jpeg *.gif *.svg *.woff *.woff2 *.ico *.webp
+        }
+        handle @static_files {
+            file_server
+        }
+
+        # 2. SPA 路由：其他所有请求都返回 index.html
+        handle {
+            try_files {path} /index.html
+            file_server
+        }
+    }
+}
+
+# HTTP 到 HTTPS 自动重定向
+http://makerroot.com {
+    redir https://makerroot.com{uri} permanent
+}

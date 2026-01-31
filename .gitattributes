@@ -1,0 +1,59 @@
+# ============================================
+# Git属性配置
+# ============================================
+
+# ===== 文本文件自动转换LF =====
+* text=auto eol=lf
+
+# ===== 特定文件类型 =====
+*.go text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.jsx text eol=lf
+*.tsx text eol=lf
+*.vue text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+*.conf text eol=lf
+*.sql text eol=lf
+*.env text eol=lf
+
+# ===== 二进制文件 =====
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+
+# ===== Go特定 =====
+*.go diff=golang
+*.sum binary
+*.mod binary
+
+# ===== 生成文件 =====
+package-lock.json binary
+yarn.lock binary
+pnpm-lock.yaml binary
+
+# ===== 文档文件 =====
+*.md diff=markdown
+LICENSE.txt text
+README.md text
+CHANGELOG.md text
+CONTRIBUTING.md text
+
+# ===== 行尾差异处理 =====
+# Windows用户应该使用core.autocrlf=true
+# * text=auto

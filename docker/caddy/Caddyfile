@@ -1,0 +1,109 @@
+# ============================================
+# Caddy 反向代理配置 - HTTPS 模式
+# 使用服务器上的 Let's Encrypt 证书
+# ============================================
+
+# 全局选项
+{
+	admin off
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 50MiB
+			roll_keep 14
+		}
+		format console
+		level INFO
+	}
+}
+
+# ============================================
+# HTTPS 配置 - 使用已有 Let's Encrypt 证书
+# ============================================
+makerroot.com {
+	log {
+		output file /var/log/caddy/access.log
+		format console
+	}
+
+	# TLS 配置 - 使用服务器上的 Let's Encrypt 证书
+	tls /etc/letsencrypt/live/makerroot.com/fullchain.pem /etc/letsencrypt/live/makerroot.com/privkey.pem
+
+	# API 接口代理
+	handle /api/* {
+		reverse_proxy backend:8080 {
+			health_uri /api/health
+			health_interval 10s
+			health_timeout 5s
+			fail_duration 30s
+			max_fails 3
+		}
+	}
+
+	# 管理后台接口代理
+	handle /admin/* {
+		reverse_proxy backend:8080 {
+			health_uri /api/health
+			health_interval 10s
+			health_timeout 5s
+			fail_duration 30s
+			max_fails 3
+		}
+	}
+
+	# 健康检查端点
+	handle /health {
+		reverse_proxy backend:8080
+	}
+
+	# 前端 SPA 静态资源
+	handle {
+		root * /usr/share/caddy/frontend
+
+		# 静态资源：文件不存在直接返回404
+		@static_files {
+			path *.js *.css *.png *.jpg *.jpeg *.gif *.svg *.woff *.woff2 *.ico *.webp
+		}
+		handle @static_files {
+			file_server
+		}
+
+		# SPA 路由：其他所有请求都返回 index.html
+		handle {
+			try_files {path} /index.html
+			file_server
+		}
+	}
+
+	# 安全响应头
+	header {
+		# HSTS (强制HTTPS)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+		# 其他安全头
+		Cache-Control "no-cache, no-store, must-revalidate"
+		Pragma "no-cache"
+		Expires "0"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer-when-downgrade"
+		X-XSS-Protection "1; mode=block"
+
+		# 启用压缩
+		Encode
+	}
+}
+
+# ============================================
+# HTTP 配置
+# ============================================
+:80 {
+	# 健康检查端点（HTTP访问，不被重定向）
+	handle /api/health {
+		reverse_proxy backend:8080
+	}
+
+	# 其他所有请求重定向到HTTPS
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}
