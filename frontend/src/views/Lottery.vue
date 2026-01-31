@@ -1334,12 +1334,15 @@ onMounted(async () => {
     setCompanyCode('DEFAULT')
   }
 
-  // 已登录（用户或管理员）时加载数据
+  // 已登录（用户或管理员）时加载数据并启动轮询
   if (userLoggedIn.value || adminLoggedIn.value) {
     await refreshConfig()
     await fetchPrizeLevels()
     await loadUserStats()
     await fetchDrawRecords()
+
+    // 启动数据轮询
+    startDataPolling()
   } else {
     // 未登录时使用默认配置
     companyConfig.value = defaultConfig
