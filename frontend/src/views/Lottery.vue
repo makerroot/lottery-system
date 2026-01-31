@@ -314,7 +314,7 @@
             <!-- 扫码参与按钮 -->
             <div class="qr-section">
               <a-button
-                @click="() => { console.log('按钮被点击'); showQRModal() }"
+                @click="showQRModal"
                 size="large"
                 block
                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; height: 48px; font-size: 16px; font-weight: bold; margin-bottom: 16px;"
@@ -589,7 +589,6 @@ const handleChangePassword = async () => {
       handleLogout()
     }, 1000)
   } catch (error) {
-    console.error('修改密码失败:', error)
     message.error(error.response?.data?.error || '修改密码失败，请检查当前密码是否正确')
   } finally {
     changePasswordLoading.value = false
@@ -614,7 +613,6 @@ const handleLogin = async () => {
   try {
     // 获取公司代码（优先从路由参数，其次从当前值，最后使用默认值）
     let companyCode = route.query.company || currentCompanyCode.value || 'default'
-    console.log('登录时使用的公司代码:', companyCode)
 
     // 使用统一登录接口（后端自动识别用户/管理员/超级管理员）
     const response = await api.post('/api/login', {
@@ -660,11 +658,9 @@ const handleLogin = async () => {
     await fetchData()
 
     // 启动数据轮询
-    console.log('\n✅ 登录成功，准备启动数据轮询...')
     startDataPolling()
 
   } catch (error) {
-    console.error('登录失败:', error)
     if (error.response && error.response.status === 401) {
       message.error('用户名或密码错误')
     } else {
@@ -835,15 +831,12 @@ watch(themeColor, () => {
 const fetchPrizeLevels = async () => {
   try {
     if (!currentCompanyCode.value) {
-      console.warn('⚠️ currentCompanyCode 为空，跳过获取奖项列表')
       return
     }
-    console.log('📊 正在获取奖项列表，company_code:', currentCompanyCode.value)
     const data = await api.get(`/api/prize-levels?company_code=${currentCompanyCode.value}`)
     prizeLevels.value = data
-    console.log('✅ 奖项列表获取成功，共', data?.length || 0, '个奖项')
   } catch (error) {
-    console.error('❌ 获取奖项列表失败:', error)
+    // 错误已被捕获
   }
 }
 
@@ -851,15 +844,12 @@ const fetchPrizeLevels = async () => {
 const loadUserStats = async () => {
   try {
     if (!currentCompanyCode.value) {
-      console.warn('⚠️ currentCompanyCode 为空，跳过获取用户统计')
       return
     }
-    console.log('📊 正在获取用户统计，company_code:', currentCompanyCode.value)
     const data = await api.get(`/api/user-stats?company_code=${currentCompanyCode.value}`)
     userStats.value = data
-    console.log('✅ 用户统计获取成功:', data)
   } catch (error) {
-    console.error('❌ 获取用户统计失败:', error)
+    // 错误已被捕获
   }
 }
 
@@ -867,32 +857,25 @@ const loadUserStats = async () => {
 const fetchDrawRecords = async () => {
   try {
     if (!currentCompanyCode.value) {
-      console.warn('⚠️ currentCompanyCode 为空，跳过获取抽奖记录')
       return
     }
-    console.log('📊 正在获取抽奖记录，company_code:', currentCompanyCode.value)
     const data = await api.get(`/api/draw-records?company_code=${currentCompanyCode.value}`)
     drawRecords.value = data || []
-    console.log('✅ 抽奖记录获取成功，共', data?.length || 0, '条记录')
   } catch (error) {
-    console.error('❌ 获取抽奖记录失败:', error)
+    // 错误已被捕获
   }
 }
 
 // 加载所有数据（奖项、统计、记录）
 const fetchData = async () => {
-  const timestamp = new Date().toISOString()
-  console.log(`\n🔄 [${timestamp}] 开始加载数据...`)
-
   try {
     await Promise.all([
       fetchPrizeLevels(),
       loadUserStats(),
       fetchDrawRecords()
     ])
-    console.log('✅ 所有数据加载完成')
   } catch (error) {
-    console.error('❌ 加载数据失败:', error)
+    // 错误已被捕获
   }
 }
 
@@ -901,83 +884,51 @@ const startDataPolling = () => {
   // 清除旧的定时器
   stopDataPolling()
 
-  console.log('🚀 ========== 启动数据轮询 ==========')
-  console.log('⏰ 轮询间隔:', DATA_REFRESH_INTERVAL, 'ms (', DATA_REFRESH_INTERVAL / 1000, '秒)')
-  console.log('🏢 当前公司代码:', currentCompanyCode.value)
-  console.log('===============================')
-
   // 立即刷新一次
-  console.log('📊 立即执行首次数据刷新...')
   fetchData()
 
   // 设置定时刷新
   dataRefreshInterval.value = setInterval(() => {
-    const timestamp = new Date().toISOString()
-    console.log(`\n⏰ [${timestamp}] 定时器触发 - 准备刷新数据`)
     fetchData()
   }, DATA_REFRESH_INTERVAL)
-
-  console.log('✅ 数据轮询已启动，定时器ID:', dataRefreshInterval.value)
 }
 
 // 停止数据轮询
 const stopDataPolling = () => {
   if (dataRefreshInterval.value) {
     clearInterval(dataRefreshInterval.value)
-    console.log('🛑 数据轮询已停止，定时器ID:', dataRefreshInterval.value)
     dataRefreshInterval.value = null
-  } else {
-    console.log('ℹ️  没有需要停止的轮询定时器')
   }
 }
 
 // 获取注册二维码
 const fetchRegisterQRCode = async () => {
   try {
-    console.log('开始获取二维码，company_code:', currentCompanyCode.value)
-
     if (!currentCompanyCode.value) {
       message.error('公司代码为空，无法获取二维码')
-      console.error('currentCompanyCode 为空')
       return
     }
 
     const apiUrl = `/api/qr-register?company_code=${currentCompanyCode.value}`
-    console.log('API URL:', apiUrl)
-
     const data = await publicApi.get(apiUrl)
-    console.log('获取到二维码数据:', data ? '成功' : '失败')
 
     // 兼容两种格式：直接返回数据 或 axios响应对象
     const qrData = data.qr_code ? data : (data.data && data.data.qr_code ? data.data : null)
-    console.log('二维码长度:', qrData?.qr_code?.length || 0)
 
     if (qrData && qrData.qr_code) {
       registerQRCode.value = qrData.qr_code
-      console.log('二维码已设置到 registerQRCode')
     } else {
       message.error('二维码数据格式错误')
-      console.error('返回数据缺少 qr_code 字段:', data)
     }
   } catch (error) {
-    console.error('获取注册二维码失败:', error)
-    console.error('错误详情:', error.response?.data || error.message)
     message.error(`获取二维码失败: ${error.response?.data?.error || error.message}`)
   }
 }
 
 // 显示二维码模态框
 const showQRModal = () => {
-  console.log('=== showQRModal 被调用 ===')
-  console.log('当前 company_code:', currentCompanyCode.value)
-  console.log('qrModalVisible 设置为:', qrModalVisible.value)
-
   qrModalVisible.value = true
-
-  console.log('准备调用 fetchRegisterQRCode')
   fetchRegisterQRCode()
-
-  console.log('=== showQRModal 执行完毕 ===')
 }
 
 // 创建显示用户列表（从后端获取真实用户）
@@ -1019,7 +970,6 @@ const createDisplayUsers = async () => {
     }
   } catch (error) {
     // 出错时使用虚拟用户
-    console.error('获取用户列表失败:', error)
     const dummyUsers = []
     const templateUsers = [
       { name: '张三', phone: '138****0001' },
@@ -1099,7 +1049,6 @@ const handleDraw = async () => {
       return
     }
   } catch (error) {
-    console.error('检查用户状态失败:', error)
     message.error('无法检查用户状态，请稍后重试')
     return
   }
@@ -1213,7 +1162,6 @@ const handleStopDrawing = async () => {
     showShake.value = false
     showConfetti.value = false
   } catch (error) {
-    console.error('抽奖失败:', error)
     message.error(error.response?.data?.error || '抽奖失败')
     drawing.value = false
   }
@@ -1359,7 +1307,6 @@ onMounted(async () => {
   if (urlCompanyCode && !currentCompanyCode.value) {
     currentCompanyCode.value = urlCompanyCode
     setCompanyCode(urlCompanyCode)
-    console.log('从路由设置公司代码:', currentCompanyCode.value)
   }
 
   // 检查管理员登录状态
@@ -1374,10 +1321,8 @@ onMounted(async () => {
       if (adminUser.value.company && adminUser.value.company.code) {
         currentCompanyCode.value = adminUser.value.company.code
         setCompanyCode(adminUser.value.company.code)
-        console.log('从管理员信息设置公司代码:', currentCompanyCode.value)
       }
     } catch (error) {
-      console.error('解析管理员信息失败:', error)
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_user')
     }
@@ -1387,12 +1332,10 @@ onMounted(async () => {
   if (!currentCompanyCode.value) {
     currentCompanyCode.value = 'DEFAULT'
     setCompanyCode('DEFAULT')
-    console.log('使用默认公司代码:', currentCompanyCode.value)
   }
 
   // 已登录（用户或管理员）时加载数据
   if (userLoggedIn.value || adminLoggedIn.value) {
-    console.log('开始加载数据，公司代码:', currentCompanyCode.value)
     await refreshConfig()
     await fetchPrizeLevels()
     await loadUserStats()
